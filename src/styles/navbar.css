@@ -1,0 +1,21 @@
+.title {
+    background: linear-gradient(to right, #CE91FF, #2B0053);
+    color: transparent;
+    background-clip: text;
+}
+
+.ac {
+    text-decoration: underline;
+    text-decoration-color: #ffffff;
+}
+
+.background {
+    background-color: #000000;
+}
+
+.btn-login{
+    background-color: #8E62C0;
+    color: #EFDBFF;
+    border-radius: 15px;
+    padding: 2px 15px;
+}
