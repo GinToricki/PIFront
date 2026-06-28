@@ -1,0 +1,531 @@
+.marketplace-page {
+    min-height: calc(100vh - 56px);
+    background:
+        radial-gradient(circle at top left, rgba(142, 98, 192, 0.16), transparent 30%),
+        radial-gradient(circle at top right, rgba(65, 131, 196, 0.12), transparent 24%),
+        linear-gradient(180deg, #f7f8fb 0%, #eef1f6 100%);
+    padding: 24px 0 40px;
+}
+
+.marketplace-shell {
+    max-width: 1560px;
+}
+
+.marketplace-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.marketplace-kicker {
+    margin: 0 0 8px;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.marketplace-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.marketplace-subtitle {
+    margin: 8px 0 0;
+    max-width: 720px;
+    color: #4b5563;
+}
+
+.marketplace-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.marketplace-stats {
+    display: flex;
+    gap: 12px;
+}
+
+.marketplace-stats div {
+    min-width: 138px;
+    padding: 14px 16px;
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.marketplace-stats span {
+    display: block;
+    font-size: 0.78rem;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.marketplace-stats strong {
+    font-size: 1.35rem;
+    color: #111827;
+}
+
+.create-listing-button,
+.secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border-radius: 14px;
+    font-weight: 600;
+    transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+.create-listing-button {
+    border: 0;
+    background: linear-gradient(135deg, #5b5ce2, #8e62c0);
+    color: #fff;
+    box-shadow: 0 12px 24px rgba(91, 92, 226, 0.18);
+}
+
+.create-listing-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(91, 92, 226, 0.24);
+    filter: brightness(1.02);
+}
+
+.create-listing-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.secondary-button {
+    border: 1px solid #d6dce7;
+    background: #fff;
+    color: #374151;
+}
+
+.marketplace-results {
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(8px);
+    padding: 18px;
+}
+
+.results-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.results-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #111827;
+}
+
+.results-header span {
+    color: #6b7280;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.card-tile {
+    overflow: hidden;
+    border: 1px solid #e7ebf2;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.card-tile:hover {
+    transform: translateY(-3px);
+    border-color: rgba(91, 92, 226, 0.18);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.card-art {
+    aspect-ratio: 0.71 / 1;
+    background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+    position: relative;
+}
+
+.card-art img,
+.card-art-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.card-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(15, 23, 42, 0.06));
+    pointer-events: none;
+}
+
+.card-art-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-weight: 600;
+    background:
+        linear-gradient(135deg, rgba(91, 92, 226, 0.08), rgba(142, 98, 192, 0.08)),
+        #f8fafc;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+.card-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.rarity-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.collector-number {
+    color: #6b7280;
+    font-size: 0.82rem;
+}
+
+.card-body h3 {
+    margin: 0 0 6px;
+    font-size: 1rem;
+    line-height: 1.2;
+    color: #111827;
+}
+
+.card-meta,
+.card-text {
+    margin: 0 0 8px;
+    color: #4b5563;
+    font-size: 0.88rem;
+}
+
+.card-meta {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #475569;
+}
+
+.listing-metrics {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.listing-metrics p {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    padding: 36px 18px 18px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.empty-state h3 {
+    margin: 0 0 8px;
+    color: #111827;
+}
+
+.empty-state .create-listing-button {
+    margin-top: 12px;
+}
+
+.listing-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1080;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.56);
+    backdrop-filter: blur(3px);
+}
+
+.listing-modal {
+    width: min(1120px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    border-radius: 18px;
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.listing-modal-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 18px 18px 14px;
+    border-bottom: 1px solid #edf1f7;
+}
+
+.listing-modal-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: #111827;
+}
+
+.icon-button {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d6dce7;
+    border-radius: 12px;
+    color: #374151;
+    background: #fff;
+}
+
+.listing-modal-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+    gap: 16px;
+    padding: 18px;
+}
+
+.listing-card-picker,
+.listing-form {
+    border: 1px solid #e7ebf2;
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px;
+}
+
+.filter-field {
+    display: block;
+    margin-bottom: 14px;
+}
+
+.filter-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.filter-input-wrap,
+.select-wrap,
+.selected-card-readout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid #d7dde7;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+    color: #6b7280;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.filter-input-wrap:focus-within,
+.select-wrap:focus-within {
+    border-color: #8e62c0;
+    box-shadow: 0 0 0 4px rgba(142, 98, 192, 0.14);
+}
+
+.filter-input-wrap input,
+.select-wrap select {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #111827;
+    font: inherit;
+}
+
+.select-wrap select {
+    appearance: none;
+    cursor: pointer;
+}
+
+.picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    max-height: 460px;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.picker-card {
+    width: 100%;
+    text-align: left;
+    padding: 0;
+    border: 1px solid #e7ebf2;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+    overflow: hidden;
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.picker-card:hover {
+    transform: translateY(-2px);
+    border-color: #bec8d8;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.picker-card.is-selected {
+    border-color: #8e62c0;
+    box-shadow: 0 0 0 3px rgba(142, 98, 192, 0.18);
+}
+
+.picker-card-art {
+    aspect-ratio: 0.71 / 1;
+    background: #f8fafc;
+}
+
+.picker-card-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.picker-card-body {
+    padding: 10px;
+}
+
+.picker-card-body h3 {
+    margin: 0 0 4px;
+    font-size: 0.92rem;
+    color: #111827;
+}
+
+.picker-card-body p {
+    margin: 0 0 8px;
+    color: #6b7280;
+    font-size: 0.82rem;
+}
+
+.selected-card-readout {
+    min-height: 58px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.selected-card-readout strong {
+    font-size: 0.95rem;
+    color: #111827;
+}
+
+.selected-card-readout span {
+    color: #6b7280;
+    font-size: 0.82rem;
+}
+
+.listing-form textarea {
+    width: 100%;
+    min-height: 94px;
+    border: 1px solid #d7dde7;
+    border-radius: 14px;
+    padding: 10px 12px;
+    resize: vertical;
+    outline: 0;
+    color: #111827;
+}
+
+.listing-form textarea:focus {
+    border-color: #8e62c0;
+    box-shadow: 0 0 0 4px rgba(142, 98, 192, 0.14);
+}
+
+.listing-form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+@media (max-width: 991.98px) {
+    .marketplace-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .marketplace-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .listing-modal-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .marketplace-page {
+        padding-top: 16px;
+    }
+
+    .marketplace-results,
+    .listing-modal,
+    .listing-card-picker,
+    .listing-form {
+        border-radius: 16px;
+    }
+
+    .cards-grid,
+    .picker-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+
+    .marketplace-stats {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .marketplace-stats div {
+        width: 100%;
+    }
+}

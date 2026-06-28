@@ -16,6 +16,7 @@ function Navbar(props) {
                         <li className="nav-item">
                             <a className={`nav-link  ${props.active === "collection" ? "active ac " : ""} `} href="/Collection">Collection</a>
                         </li>
+
                     </ul>
                     <button className="btn-login" onClick={() => navigate("/Login")}>Login</button>
                 </div>
