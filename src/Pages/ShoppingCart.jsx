@@ -1,27 +1,103 @@
+import {useMemo, useState} from "react";
 import Navbar from "../Components/Navbar.jsx";
 import useCartStore from "../store/cartStore.js";
 import {CircleDollarSign, Trash2} from "lucide-react";
 import "../styles/shoppingCart.css";
+import useAuthStore from "../store/authStore.js";
+import axiosInstance from "../Common/axiosInstance.jsx";
+
+function decodeJwt(token) {
+    if (!token || typeof token !== "string") {
+        return null;
+    }
+
+    try {
+        const tokenParts = token.split(".");
+        if (tokenParts.length < 2) {
+            return null;
+        }
+
+        const payload = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const decoded = atob(payload);
+
+        return JSON.parse(decoded);
+    } catch (_error) {
+        return null;
+    }
+}
+
+function resolveUserId(user, tokenValue) {
+    if (user?.userId != null) {
+        return user.userId;
+    }
+
+    if (user?.id != null) {
+        return user.id;
+    }
+
+    const tokenPayload = decodeJwt(tokenValue);
+    if (!tokenPayload) {
+        return null;
+    }
+
+    return (
+        tokenPayload.userId ??
+        tokenPayload.userid ??
+        tokenPayload.nameid ??
+        tokenPayload.sub ??
+        tokenPayload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ??
+        null
+    );
+}
 
 function ShoppingCart() {
     const items = useCartStore((state) => state.items);
     const removeItem = useCartStore((state) => state.removeItem);
     const clearCart = useCartStore((state) => state.clearCart);
     const updateQuantity = useCartStore((state) => state.updateQuantity);
+    const authToken = useAuthStore((state) => state.token);
+    const authUser = useAuthStore((state) => state.user);
+    const [isPurchasing, setIsPurchasing] = useState(false);
+    const [purchaseError, setPurchaseError] = useState("");
 
     const totalItems = items.reduce((total, item) => total + Number(item.quantity || 0), 0);
     const subtotal = items.reduce(
         (total, item) => total + Number(item.unitPrice || 0) * Number(item.quantity || 1),
         0
     );
-    const canPurchase = items.length > 0;
+    const rawToken = typeof authToken === "string" ? authToken : authToken?.token;
+    const userId = useMemo(() => resolveUserId(authUser, rawToken), [authUser, rawToken]);
+    const canPurchase = items.length > 0 && !!userId && !isPurchasing;
 
-    function purchaseItems() {
+    async function purchaseItems() {
         if (!canPurchase) {
+            if (!userId) {
+                setPurchaseError("You must be logged in before purchasing.");
+            }
             return;
         }
 
-        clearCart();
+        setPurchaseError("");
+        setIsPurchasing(true);
+
+        try {
+            await Promise.all(
+                items.map((item) =>
+                    axiosInstance.post("/Listing/BuyListing", {
+                        userId,
+                        ListingId: item.listingId,
+                        Quantity: Number(item.quantity || 1),
+                    })
+                )
+            );
+
+            clearCart();
+        } catch (error) {
+            console.error(error);
+            setPurchaseError("Purchase failed. Please try again.");
+        } finally {
+            setIsPurchasing(false);
+        }
     }
 
     return (
@@ -117,9 +193,10 @@ function ShoppingCart() {
                                     onClick={purchaseItems}
                                     disabled={!canPurchase}
                                 >
-                                    Purchase
+                                    {isPurchasing ? "Purchasing..." : "Purchase"}
                                 </button>
                             </div>
+                            {purchaseError && <p className="purchase-error">{purchaseError}</p>}
                         </section>
                     )}
                 </div>
