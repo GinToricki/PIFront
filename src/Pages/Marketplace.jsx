@@ -1,54 +1,34 @@
-import {useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {CircleDollarSign, Plus, Search, Sparkles, X} from "lucide-react";
 import Navbar from "../Components/Navbar.jsx";
 import "../styles/marketplace.css";
+import axiosInstance from "../Common/axiosInstance.jsx";
+import useCartStore from "../store/cartStore.js";
 
-const cardCatalog = [
-    {
-        cardId: "rb-001",
-        name: "Astra, Dawn Vanguard",
-        setLabel: "Riftfall Core",
-        rarity: "Epic",
-        imageUrl: "",
-    },
-    {
-        cardId: "rb-014",
-        name: "Gloom Harbor Corsair",
-        setLabel: "Tides of Ruin",
-        rarity: "Rare",
-        imageUrl: "",
-    },
-    {
-        cardId: "rb-031",
-        name: "Ironbark Sentinel",
-        setLabel: "Wildspire Siege",
-        rarity: "Uncommon",
-        imageUrl: "",
-    },
-    {
-        cardId: "rb-048",
-        name: "Hexglass Adept",
-        setLabel: "Riftfall Core",
-        rarity: "Rare",
-        imageUrl: "",
-    },
-    {
-        cardId: "rb-059",
-        name: "Vera, Skybreaker",
-        setLabel: "Stormwake Prelude",
-        rarity: "Showcase",
-        imageUrl: "",
-    },
-    {
-        cardId: "rb-073",
-        name: "Nightcoil Drake",
-        setLabel: "Tides of Ruin",
-        rarity: "Common",
-        imageUrl: "",
-    },
-];
+const rarityLabels = {
+    1: "Common",
+    2: "Uncommon",
+    3: "Rare",
+    4: "Epic",
+    5: "Overnumbered",
+    6: "Showcase",
+    7: "Promo",
+};
+
+function getRarityLabel(value) {
+    if (value == null) {
+        return "Unknown";
+    }
+
+    if (rarityLabels[value]) {
+        return rarityLabels[value];
+    }
+
+    return String(value);
+}
 
 function Marketplace() {
+    const addToCart = useCartStore((state) => state.addItem);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCardId, setSelectedCardId] = useState("");
@@ -58,12 +38,135 @@ function Marketplace() {
         condition: "Near Mint",
         notes: "",
     });
-    const [listings, setListings] = useState([]);
+    const [rawListings, setRawListings] = useState([]);
+    const [cards, setCards] = useState([]);
+
+    useEffect(() => {
+        axiosInstance
+            .get("/Card/GetAllCards")
+            .then((response) => {
+                if (response) {
+                    setCards(response.data || []);
+                }
+            })
+            .catch((error) => {
+                console.error(error);
+            });
+    }, []);
+
+    const loadListings = useCallback(() => {
+        axiosInstance
+            .get("/Listing/GetAllListings")
+            .then((response) => {
+                const payload = response?.data;
+
+                if (Array.isArray(payload)) {
+                    setRawListings(payload);
+                    return;
+                }
+
+                if (Array.isArray(payload?.items)) {
+                    setRawListings(payload.items);
+                    return;
+                }
+
+                if (Array.isArray(payload?.data)) {
+                    setRawListings(payload.data);
+                    return;
+                }
+
+                setRawListings([]);
+            })
+            .catch((error) => {
+                console.error(error);
+            });
+    }, []);
+
+    useEffect(() => {
+        loadListings();
+    }, [loadListings]);
+
+    const cardCatalog = useMemo(() => {
+        return cards
+            .map((card) => {
+                const id = String(card.cardId ?? card.riftboundId ?? "");
+
+                return {
+                    ...card,
+                    id,
+                    displaySet: card.setLabel || card.setId || "Unknown set",
+                    rarityLabel: getRarityLabel(card.rarity),
+                };
+            })
+            .filter((card) => card.id);
+    }, [cards]);
 
     const selectedCard = useMemo(
-        () => cardCatalog.find((card) => card.cardId === selectedCardId),
-        [selectedCardId]
+        () => cardCatalog.find((card) => card.id === selectedCardId),
+        [cardCatalog, selectedCardId]
     );
+
+    const cardsById = useMemo(() => {
+        const map = new Map();
+
+        cardCatalog.forEach((card) => {
+            if (card.id) {
+                map.set(String(card.id), card);
+            }
+            if (card.cardId) {
+                map.set(String(card.cardId), card);
+            }
+            if (card.riftboundId) {
+                map.set(String(card.riftboundId), card);
+            }
+        });
+
+        return map;
+    }, [cardCatalog]);
+
+    const listings = useMemo(() => {
+        return rawListings
+            .map((listing) => {
+                const listingId = String(listing.listingId ?? listing.id ?? "");
+                const cardId = String(
+                    listing.cardId ??
+                        listing.riftboundId ??
+                        listing.card?.cardId ??
+                        listing.card?.riftboundId ??
+                        ""
+                );
+
+                const listingCard = listing.card
+                    ? {
+                        ...listing.card,
+                        id: String(listing.card.cardId ?? listing.card.riftboundId ?? cardId),
+                        displaySet: listing.card.setLabel || listing.card.setId || "Unknown set",
+                        rarityLabel: getRarityLabel(listing.card.rarity),
+                    }
+                    : null;
+
+                const card = listingCard ||
+                    cardsById.get(cardId) || {
+                        id: cardId,
+                        cardId,
+                        riftboundId: cardId,
+                        name: listing.cardName || "Unknown card",
+                        imageUrl: "",
+                        displaySet: listing.setLabel || listing.setId || "Unknown set",
+                        rarityLabel: getRarityLabel(listing.rarity),
+                    };
+
+                return {
+                    listingId,
+                    card,
+                    price: Number(listing.price ?? listing.unitPrice ?? 0),
+                    quantity: Math.max(1, Number(listing.quantity ?? listing.availableQuantity ?? 1)),
+                    condition: listing.condition || "Near Mint",
+                    notes: String(listing.notes || "").trim(),
+                };
+            })
+            .filter((listing) => listing.listingId);
+    }, [cardsById, rawListings]);
 
     const filteredCatalog = useMemo(() => {
         const search = searchQuery.trim().toLowerCase();
@@ -72,11 +175,11 @@ function Marketplace() {
         }
 
         return cardCatalog.filter((card) =>
-            [card.name, card.setLabel, card.rarity].some((value) =>
+            [card.name, card.displaySet, card.rarityLabel].some((value) =>
                 String(value).toLowerCase().includes(search)
             )
         );
-    }, [searchQuery]);
+    }, [cardCatalog, searchQuery]);
 
     const totalCards = cardCatalog.length;
     const activeListings = listings.length;
@@ -105,26 +208,27 @@ function Marketplace() {
         setNewListing((prev) => ({...prev, [name]: value}));
     }
 
-    function createListing(e) {
+    async function createListing(e) {
         e.preventDefault();
 
         if (!selectedCard) {
             return;
         }
 
-        setListings((prev) => [
-            {
-                listingId: `lst-${Date.now()}`,
-                card: selectedCard,
-                price: Number(newListing.price || 0),
-                quantity: Number(newListing.quantity || 1),
+        try {
+            await axiosInstance.post("/Listing/AddListing", {
+                cardId: selectedCard.cardId ?? selectedCard.riftboundId,
+                price: newListing.price,
+                quantity: newListing.quantity,
                 condition: newListing.condition,
-                notes: newListing.notes.trim(),
-            },
-            ...prev,
-        ]);
+                notes: newListing.notes,
+            });
 
-        closeCreateModal();
+            loadListings();
+            closeCreateModal();
+        } catch (error) {
+            console.error(error);
+        }
     }
 
     return (
@@ -192,12 +296,12 @@ function Marketplace() {
 
                                         <div className="card-body">
                                             <div className="card-topline">
-                                                <span className="rarity-pill">{listing.card.rarity}</span>
+                                                <span className="rarity-pill">{listing.card.rarityLabel}</span>
                                                 <span className="collector-number">{listing.condition}</span>
                                             </div>
 
                                             <h3>{listing.card.name}</h3>
-                                            <p className="card-meta">{listing.card.setLabel}</p>
+                                            <p className="card-meta">{listing.card.displaySet}</p>
 
                                             <div className="listing-metrics">
                                                 <p>
@@ -208,6 +312,26 @@ function Marketplace() {
                                             </div>
 
                                             {listing.notes && <p className="card-text">{listing.notes}</p>}
+
+                                            <button
+                                                type="button"
+                                                className="buy-button"
+                                                onClick={() =>
+                                                    addToCart({
+                                                        listingId: listing.listingId,
+                                                        cardId: listing.card.cardId ?? listing.card.riftboundId,
+                                                        name: listing.card.name,
+                                                        imageUrl: listing.card.imageUrl,
+                                                        setLabel: listing.card.displaySet,
+                                                        rarity: listing.card.rarityLabel,
+                                                        condition: listing.condition,
+                                                        unitPrice: listing.price,
+                                                        availableQuantity: listing.quantity,
+                                                    })
+                                                }
+                                            >
+                                                Buy
+                                            </button>
                                         </div>
                                     </article>
                                 ))}
@@ -254,10 +378,10 @@ function Marketplace() {
                                 <div className="picker-grid">
                                     {filteredCatalog.map((card) => (
                                         <button
-                                            key={card.cardId}
+                                            key={card.id}
                                             type="button"
-                                            className={`picker-card ${selectedCardId === card.cardId ? "is-selected" : ""}`}
-                                            onClick={() => setSelectedCardId(card.cardId)}
+                                            className={`picker-card ${selectedCardId === card.id ? "is-selected" : ""}`}
+                                            onClick={() => setSelectedCardId(card.id)}
                                         >
                                             <div className="picker-card-art">
                                                 {card.imageUrl ? (
@@ -270,8 +394,8 @@ function Marketplace() {
                                             </div>
                                             <div className="picker-card-body">
                                                 <h3>{card.name}</h3>
-                                                <p>{card.setLabel}</p>
-                                                <span className="rarity-pill">{card.rarity}</span>
+                                                <p>{card.displaySet}</p>
+                                                <span className="rarity-pill">{card.rarityLabel}</span>
                                             </div>
                                         </button>
                                     ))}
@@ -285,7 +409,7 @@ function Marketplace() {
                                         {selectedCard ? (
                                             <>
                                                 <strong>{selectedCard.name}</strong>
-                                                <span>{selectedCard.setLabel}</span>
+                                                <span>{selectedCard.displaySet}</span>
                                             </>
                                         ) : (
                                             <span>Choose a card from the left</span>

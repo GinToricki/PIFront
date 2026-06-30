@@ -7,6 +7,7 @@ import Marketplace from "./Pages/Marketplace.jsx";
 import Collection from "./Pages/Collection.jsx";
 import Login from "./Pages/Login.jsx";
 import Register from "./Pages/Register.jsx";
+import ShoppingCart from "./Pages/ShoppingCart.jsx";
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="/" element={<Homepage />} />
             <Route path="/Marketplace" element={<Marketplace />} />
             <Route path="/Collection" element={<Collection />} />
+            <Route path="/ShoppingCart" element={<ShoppingCart />} />
             <Route path="/Login" element={<Login />} />
             <Route path="/Register" element={<Register />} />
         </Routes>
