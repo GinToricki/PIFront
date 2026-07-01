@@ -5,6 +5,7 @@ import {CircleDollarSign, Trash2} from "lucide-react";
 import "../styles/shoppingCart.css";
 import useAuthStore from "../store/authStore.js";
 import axiosInstance from "../Common/axiosInstance.jsx";
+import {Alert, Snackbar} from "@mui/material";
 
 function decodeJwt(token) {
     if (!token || typeof token !== "string") {
@@ -58,7 +59,23 @@ function ShoppingCart() {
     const authToken = useAuthStore((state) => state.token);
     const authUser = useAuthStore((state) => state.user);
     const [isPurchasing, setIsPurchasing] = useState(false);
-    const [purchaseError, setPurchaseError] = useState("");
+    const [snackbar, setSnackbar] = useState({
+        open: false,
+        type: "success",
+        message: "",
+    });
+
+    function openSnackbar(type, message) {
+        setSnackbar({
+            open: true,
+            type,
+            message,
+        });
+    }
+
+    function closeSnackbar() {
+        setSnackbar((prev) => ({ ...prev, open: false }));
+    }
 
     const totalItems = items.reduce((total, item) => total + Number(item.quantity || 0), 0);
     const subtotal = items.reduce(
@@ -72,12 +89,11 @@ function ShoppingCart() {
     async function purchaseItems() {
         if (!canPurchase) {
             if (!userId) {
-                setPurchaseError("You must be logged in before purchasing.");
+                openSnackbar("warning", "You must be logged in before purchasing.");
             }
             return;
         }
 
-        setPurchaseError("");
         setIsPurchasing(true);
 
         try {
@@ -92,9 +108,10 @@ function ShoppingCart() {
             );
 
             clearCart();
+            openSnackbar("success", "Purchase completed successfully.");
         } catch (error) {
             console.error(error);
-            setPurchaseError("Purchase failed. Please try again.");
+            openSnackbar("error", "Purchase failed. Please try again.");
         } finally {
             setIsPurchasing(false);
         }
@@ -196,11 +213,25 @@ function ShoppingCart() {
                                     {isPurchasing ? "Purchasing..." : "Purchase"}
                                 </button>
                             </div>
-                            {purchaseError && <p className="purchase-error">{purchaseError}</p>}
                         </section>
                     )}
                 </div>
             </div>
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
+                onClose={closeSnackbar}
+                anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+                <Alert
+                    severity={snackbar.type}
+                    onClose={closeSnackbar}
+                    variant="filled"
+                    sx={{ width: "100%" }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </>
     );
 }

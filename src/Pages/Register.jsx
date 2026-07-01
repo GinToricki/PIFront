@@ -3,7 +3,8 @@ import {useNavigate} from "react-router";
 import axiosInstance from "../Common/axiosInstance";
 import {useState} from "react";
 import {Alert, Snackbar} from "@mui/material";
-import { Cog } from "lucide-react";
+import {Cog, KeyRound, LogIn, Mail, User} from "lucide-react";
+import "../styles/auth.css";
 
 function Register() {
     const navigate = useNavigate();
@@ -54,23 +55,50 @@ function Register() {
     return (
         <>
             <Navbar />
-            <div className="container">
-                <form onSubmit={register} method="POST">
-                    <div className="mb-3">
-                        <label htmlFor="usernameInput" className="form-label">Username</label>
-                        <input type="username" id="usernameInput" className="form-control" name="username"></input>
-                    </div>
-                    <div className="mb-3">
-                        <label htmlFor="emailInput" className="form-label">Email</label>
-                        <input type="email" id="emailInput" className="form-control" name="email"></input>
-                    </div>
-                    <div className="mb-3">
-                        <label htmlFor="passwordInput" className="form-label">Password</label>
-                        <input type="password" id="passwordInput" className="form-control" name="password"></input>
-                    </div>
-                    <button type="submit" className="btn btn-primary" disabled={busy}>Register {busy && <Cog className="spin" />}</button>
-                    <button type="button" className="btn btn-primary" onClick={() => navigate("/Login")} disabled={busy}>Login {busy && <Cog className="spin" />}</button>
-                </form>
+            <div className="auth-page">
+                <div className="auth-shell container">
+                    <section className="auth-panel">
+                        <div className="auth-header">
+                            <p className="auth-kicker">Account</p>
+                            <h1>Create account</h1>
+                            <p className="auth-subtitle">Register to start listing cards and managing your collection.</p>
+                        </div>
+
+                        <form onSubmit={register} method="POST" className="auth-form">
+                            <label className="auth-field" htmlFor="usernameInput">
+                                <span>Username</span>
+                                <div className="auth-input-wrap">
+                                    <User size={16} />
+                                    <input type="text" id="usernameInput" name="username" required />
+                                </div>
+                            </label>
+                            <label className="auth-field" htmlFor="emailInput">
+                                <span>Email</span>
+                                <div className="auth-input-wrap">
+                                    <Mail size={16} />
+                                    <input type="email" id="emailInput" name="email" required />
+                                </div>
+                            </label>
+                            <label className="auth-field" htmlFor="passwordInput">
+                                <span>Password</span>
+                                <div className="auth-input-wrap">
+                                    <KeyRound size={16} />
+                                    <input type="password" id="passwordInput" name="password" required />
+                                </div>
+                            </label>
+
+                            <div className="auth-actions">
+                                <button type="submit" className="auth-primary-button" disabled={busy}>
+                                    Register {busy && <Cog className="spin" />}
+                                </button>
+                                <button type="button" className="auth-secondary-button" onClick={() => navigate("/Login")} disabled={busy}>
+                                    <LogIn size={16} />
+                                    Login
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
             </div>
             <Snackbar
                 open={snackbar.open}

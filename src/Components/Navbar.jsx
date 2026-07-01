@@ -2,9 +2,12 @@ import '../styles/navbar.css'
 import {useNavigate} from "react-router";
 import {ShoppingCart} from "lucide-react";
 import useCartStore from "../store/cartStore.js";
+import useAuthStore from "../store/authStore.js";
 
 function Navbar(props) {
     const navigate = useNavigate();
+    const token = useAuthStore((state) => state.token);
+    const logout = useAuthStore((state) => state.logout);
     const totalCartItems = useCartStore((state) =>
         state.items.reduce((total, item) => total + Number(item.quantity || 0), 0)
     );
@@ -27,6 +30,7 @@ function Navbar(props) {
 
                     </ul>
                     <div className="navbar-actions">
+                        {token && <button className="btn-login" onClick={() => navigate("/Dashboard")}>Dashboard</button>}
                         <button
                             className="cart-icon-button"
                             type="button"
@@ -36,7 +40,18 @@ function Navbar(props) {
                             <ShoppingCart size={18} />
                             {totalCartItems > 0 && <span className="cart-count-badge">{totalCartItems}</span>}
                         </button>
-                        <button className="btn-login" onClick={() => navigate("/Login")}>Login</button>
+                        {!token && <button className="btn-login" onClick={() => navigate("/Login")}>Login</button>}
+                        {token && (
+                            <button
+                                className="btn-login"
+                                onClick={() => {
+                                    logout();
+                                    navigate("/");
+                                }}
+                            >
+                                Logout
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
