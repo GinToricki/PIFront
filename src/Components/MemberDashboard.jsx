@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Clock3, Pencil, Store, Trash2, Wallet, X } from "lucide-react";
+import { Check, Clock3, Layers, Pencil, Store, Trash2, Wallet, X } from "lucide-react";
 import axiosInstance from "../Common/axiosInstance.jsx";
+import useAuthStore from "../store/authStore.js";
 
 const rarityLabels = {
     1: "Common",
@@ -115,6 +116,55 @@ function normalizeListingPayload(payload) {
     return [];
 }
 
+function normalizeDeck(rawDeck) {
+    const deckId = getFirst(rawDeck?.deckId, rawDeck?.DeckId, rawDeck?.id, rawDeck?.Id);
+    const deckName = String(getFirst(rawDeck?.deckName, rawDeck?.DeckName, rawDeck?.name, rawDeck?.Name, "Untitled Deck")).trim();
+    const deckList = String(getFirst(rawDeck?.deckList, rawDeck?.DeckList, ""));
+    const ownerId = String(getFirst(rawDeck?.userId, rawDeck?.UserId, ""));
+
+    return {
+        deckId: deckId != null ? String(deckId) : "",
+        userId: ownerId,
+        deckName: deckName || "Untitled Deck",
+        deckList,
+    };
+}
+
+function normalizeDeckPayload(payload) {
+    if (Array.isArray(payload)) {
+        return payload.map(normalizeDeck);
+    }
+
+    if (Array.isArray(payload?.items)) {
+        return payload.items.map(normalizeDeck);
+    }
+
+    if (Array.isArray(payload?.data)) {
+        return payload.data.map(normalizeDeck);
+    }
+
+    return [];
+}
+
+function parseDeckList(deckList) {
+    if (!deckList) {
+        return [];
+    }
+
+    return String(deckList)
+        .split(/[;\n,]+/)
+        .map((chunk) => chunk.trim())
+        .filter(Boolean)
+        .map((chunk) => {
+            const [rawId, rawQty] = chunk.split(":");
+            const cardId = String(rawId || "").trim();
+            const quantity = Math.max(1, toNumber(rawQty, 1));
+
+            return { cardId, quantity };
+        })
+        .filter((item) => item.cardId);
+}
+
 function MemberDashboard({ userId }) {
     const [activeTab, setActiveTab] = useState("purchase-history");
     const [fundAmount, setFundAmount] = useState("20");
@@ -127,14 +177,38 @@ function MemberDashboard({ userId }) {
     const [myListingsSuccess, setMyListingsSuccess] = useState("");
     const [editingListingId, setEditingListingId] = useState("");
     const [deletingListingId, setDeletingListingId] = useState("");
+    const [myDecks, setMyDecks] = useState([]);
+    const [isLoadingDecks, setIsLoadingDecks] = useState(false);
+    const [myDecksError, setMyDecksError] = useState("");
+    const [myDecksSuccess, setMyDecksSuccess] = useState("");
+    const [editingDeckId, setEditingDeckId] = useState("");
+    const [deletingDeckId, setDeletingDeckId] = useState("");
+    const [deckEditForm, setDeckEditForm] = useState({
+        deckName: "",
+        deckList: "",
+    });
     const [editForm, setEditForm] = useState({
         price: "",
         quantity: "",
         condition: "Near Mint",
         notes: "",
     });
+    const funds = useAuthStore((state) => state.funds);
+    const addFunds = useAuthStore((state) => state.addFunds);
 
     const parsedFundAmount = useMemo(() => Number(fundAmount || 0), [fundAmount]);
+    const hasValidFundAmount = Number.isFinite(parsedFundAmount) && parsedFundAmount > 0;
+
+    function handleAddFundsSubmit(event) {
+        event.preventDefault();
+
+        if (!hasValidFundAmount) {
+            return;
+        }
+
+        addFunds(parsedFundAmount);
+        setFundAmount("20");
+    }
 
     useEffect(() => {
         let isDisposed = false;
@@ -319,12 +393,18 @@ function MemberDashboard({ userId }) {
             return;
         }
 
+        const listingIdValue = Number(listingId);
+        if (!Number.isInteger(listingIdValue)) {
+            setMyListingsError("Invalid listing ID.");
+            return;
+        }
+
         setMyListingsError("");
         setMyListingsSuccess("");
 
         const payload = {
-            listingId,
-            ListingId: listingId,
+            listingId: listingIdValue,
+            ListingId: listingIdValue,
             price: Number(editForm.price || 0),
             quantity: Math.max(1, Number(editForm.quantity || 1)),
             condition: editForm.condition,
@@ -363,24 +443,22 @@ function MemberDashboard({ userId }) {
             return;
         }
 
+        const listingIdValue = Number(listingId);
+        if (!Number.isInteger(listingIdValue)) {
+            setMyListingsError("Invalid listing ID.");
+            return;
+        }
+
         setDeletingListingId(listingId);
         setMyListingsError("");
         setMyListingsSuccess("");
 
         try {
-            try {
-                await axiosInstance.delete("/Listing/DeleteListing", {
-                    params: {
-                        listingId,
-                        ListingId: listingId,
-                    },
-                });
-            } catch {
-                await axiosInstance.post("/Listing/DeleteListing", {
-                    listingId,
-                    ListingId: listingId,
-                });
-            }
+            await axiosInstance.post("/Listing/DeleteListing", null, {
+                params: {
+                    listingId: listingIdValue,
+                },
+            });
 
             setMyListings((prev) => prev.filter((listing) => listing.listingId !== listingId));
             setMyListingsSuccess(`Listing #${listingId} deleted.`);
@@ -391,6 +469,148 @@ function MemberDashboard({ userId }) {
             setMyListingsError("Could not delete listing.");
         } finally {
             setDeletingListingId("");
+        }
+    }
+
+    async function loadMyDecks() {
+        if (!userId) {
+            setMyDecks([]);
+            setMyDecksError("Missing user ID. Please log in again.");
+            return;
+        }
+
+        setIsLoadingDecks(true);
+        setMyDecksError("");
+        setMyDecksSuccess("");
+
+        try {
+            const [deckResponse, cardsResponse] = await Promise.allSettled([
+                axiosInstance.get("/Deck/GetUserDecks", {
+                    params: { userId },
+                }),
+                axiosInstance.get("/Card/GetAllCards"),
+            ]);
+
+            const rawDecks = deckResponse.status === "fulfilled"
+                ? normalizeDeckPayload(deckResponse.value?.data)
+                : [];
+
+            const cardsById = new Map();
+            if (cardsResponse.status === "fulfilled" && Array.isArray(cardsResponse.value?.data)) {
+                cardsResponse.value.data.forEach((rawCard) => {
+                    const cardId = String(getFirst(rawCard?.cardId, rawCard?.CardId, rawCard?.riftboundId, rawCard?.RiftboundId, ""));
+                    if (!cardId) {
+                        return;
+                    }
+
+                    cardsById.set(cardId, String(getFirst(rawCard?.name, rawCard?.Name, "Unknown card")));
+                });
+            }
+
+            const enrichedDecks = rawDecks
+                .filter((deck) => deck.deckId)
+                .map((deck) => {
+                    const entries = parseDeckList(deck.deckList).map((entry) => ({
+                        ...entry,
+                        cardName: cardsById.get(entry.cardId) || "Unknown card",
+                    }));
+
+                    const totalCards = entries.reduce((sum, entry) => sum + entry.quantity, 0);
+
+                    return {
+                        ...deck,
+                        entries,
+                        totalCards,
+                    };
+                });
+
+            setMyDecks(enrichedDecks);
+        } catch {
+            setMyDecks([]);
+            setMyDecksError("Could not load your decks.");
+        } finally {
+            setIsLoadingDecks(false);
+        }
+    }
+
+    function startEditingDeck(deck) {
+        setEditingDeckId(deck.deckId);
+        setDeckEditForm({
+            deckName: deck.deckName || "",
+            deckList: deck.deckList || "",
+        });
+        setMyDecksError("");
+        setMyDecksSuccess("");
+    }
+
+    function cancelEditingDeck() {
+        setEditingDeckId("");
+        setDeckEditForm({
+            deckName: "",
+            deckList: "",
+        });
+    }
+
+    async function saveDeckUpdate(deckId) {
+        if (!deckId) {
+            return;
+        }
+
+        setMyDecksError("");
+        setMyDecksSuccess("");
+
+        const payload = {
+            DeckId: Number(deckId),
+            deckId: Number(deckId),
+            UserId: userId,
+            userId,
+            DeckName: deckEditForm.deckName.trim(),
+            deckName: deckEditForm.deckName.trim(),
+            DeckList: deckEditForm.deckList.trim(),
+            deckList: deckEditForm.deckList.trim(),
+        };
+
+        try {
+            await axiosInstance.post("/Deck/UpdateDeck", payload);
+
+            setMyDecksSuccess(`Deck #${deckId} updated.`);
+            cancelEditingDeck();
+            await loadMyDecks();
+        } catch {
+            setMyDecksError("Could not update deck.");
+        }
+    }
+
+    async function deleteMyDeck(deckId) {
+        if (!deckId) {
+            return;
+        }
+
+        setDeletingDeckId(deckId);
+        setMyDecksError("");
+        setMyDecksSuccess("");
+
+        try {
+            try {
+                await axiosInstance.post("/Deck/DeleteDeck", null, {
+                    params: { deckId: Number(deckId) },
+                });
+            } catch {
+                await axiosInstance.post("/Deck/DeleteDeck", {
+                    deckId: Number(deckId),
+                    DeckId: Number(deckId),
+                });
+            }
+
+            setMyDecks((prev) => prev.filter((deck) => deck.deckId !== deckId));
+            setMyDecksSuccess(`Deck #${deckId} deleted.`);
+            if (editingDeckId === deckId) {
+                cancelEditingDeck();
+            }
+        } catch {
+            setMyDecksError("Could not delete deck.");
+        } finally {
+            setDeletingDeckId("");
         }
     }
 
@@ -420,6 +640,18 @@ function MemberDashboard({ userId }) {
                 >
                     <Store size={16} />
                     My Listings
+                </button>
+
+                <button
+                    type="button"
+                    className={`member-nav-tab ${activeTab === "my-decks" ? "is-active" : ""}`}
+                    onClick={() => {
+                        setActiveTab("my-decks");
+                        loadMyDecks();
+                    }}
+                >
+                    <Layers size={16} />
+                    My Decks
                 </button>
 
                 <button
@@ -632,7 +864,8 @@ function MemberDashboard({ userId }) {
                     <div>
                         <h2>Add funds</h2>
                         <p>Top up your marketplace balance.</p>
-                        <form className="member-funds-form" onSubmit={(e) => e.preventDefault()}>
+                        <p>Current funds: ${Number(funds || 0).toFixed(2)}</p>
+                        <form className="member-funds-form" onSubmit={handleAddFundsSubmit}>
                             <label htmlFor="fundAmountInput">Amount (USD)</label>
                             <input
                                 id="fundAmountInput"
@@ -642,10 +875,123 @@ function MemberDashboard({ userId }) {
                                 value={fundAmount}
                                 onChange={(e) => setFundAmount(e.target.value)}
                             />
-                            <button type="submit" disabled={parsedFundAmount <= 0}>
+                            <button type="submit" disabled={!hasValidFundAmount}>
                                 Add funds
                             </button>
                         </form>
+                    </div>
+                )}
+
+                {activeTab === "my-decks" && (
+                    <div>
+                        <h2>My Decks</h2>
+                        <p>Review, edit, and delete decks saved from collection.</p>
+
+                        {isLoadingDecks && <p>Loading your decks...</p>}
+                        {!isLoadingDecks && myDecksError && <p>{myDecksError}</p>}
+                        {!isLoadingDecks && myDecksSuccess && <p className="admin-form-success">{myDecksSuccess}</p>}
+
+                        {!isLoadingDecks && !myDecksError && myDecks.length === 0 && <p>You have no saved decks.</p>}
+
+                        {!isLoadingDecks && !myDecksError && myDecks.length > 0 && (
+                            <div className="dashboard-listings-grid">
+                                {myDecks.map((deck) => (
+                                    <article key={deck.deckId} className="dashboard-listing-item">
+                                        <div>
+                                            <div className="dashboard-listing-topline">
+                                                <span className="dashboard-rarity-pill">Deck #{deck.deckId}</span>
+                                                <span>{deck.totalCards} cards</span>
+                                            </div>
+                                            <strong>{deck.deckName}</strong>
+                                            <p>User ID: {deck.userId || userId || "Unknown"}</p>
+                                        </div>
+
+                                        {deck.entries.length > 0 && (
+                                            <div className="member-deck-entry-list">
+                                                {deck.entries.map((entry, index) => (
+                                                    <p key={`${deck.deckId}-${entry.cardId}-${index}`}>
+                                                        {entry.quantity}x {entry.cardName} <span>(Card ID: {entry.cardId})</span>
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {deck.entries.length === 0 && <p>Deck list is empty.</p>}
+
+                                        <div className="dashboard-listing-actions">
+                                            <button
+                                                type="button"
+                                                className="dashboard-secondary-button"
+                                                onClick={() => startEditingDeck(deck)}
+                                            >
+                                                <Pencil size={15} />
+                                                Edit
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="dashboard-danger-button"
+                                                onClick={() => deleteMyDeck(deck.deckId)}
+                                                disabled={deletingDeckId === deck.deckId}
+                                            >
+                                                <Trash2 size={15} />
+                                                {deletingDeckId === deck.deckId ? "Deleting..." : "Delete"}
+                                            </button>
+                                        </div>
+
+                                        {editingDeckId === deck.deckId && (
+                                            <form
+                                                className="dashboard-listing-edit-form"
+                                                onSubmit={(event) => {
+                                                    event.preventDefault();
+                                                    saveDeckUpdate(deck.deckId);
+                                                }}
+                                            >
+                                                <label className="admin-form-span">
+                                                    Deck Name
+                                                    <input
+                                                        type="text"
+                                                        value={deckEditForm.deckName}
+                                                        onChange={(event) =>
+                                                            setDeckEditForm((prev) => ({ ...prev, deckName: event.target.value }))
+                                                        }
+                                                        required
+                                                    />
+                                                </label>
+
+                                                <label className="admin-form-span">
+                                                    Deck List
+                                                    <textarea
+                                                        rows={4}
+                                                        value={deckEditForm.deckList}
+                                                        onChange={(event) =>
+                                                            setDeckEditForm((prev) => ({ ...prev, deckList: event.target.value }))
+                                                        }
+                                                        placeholder="Example: 1001:2;1002:3;1003:1"
+                                                        required
+                                                    />
+                                                </label>
+
+                                                <div className="dashboard-listing-edit-actions">
+                                                    <button type="submit" className="dashboard-secondary-button">
+                                                        <Check size={15} />
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="dashboard-secondary-button"
+                                                        onClick={cancelEditingDeck}
+                                                    >
+                                                        <X size={15} />
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        )}
+                                    </article>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

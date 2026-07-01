@@ -349,6 +349,29 @@
     color: #4a5568;
 }
 
+.member-deck-entry-list {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 8px 10px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.member-deck-entry-list p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.member-deck-entry-list p + p {
+    margin-top: 4px;
+}
+
+.member-deck-entry-list span {
+    color: #64748b;
+}
+
 .dashboard-listing-card-head {
     display: grid;
     grid-template-columns: 64px 1fr;

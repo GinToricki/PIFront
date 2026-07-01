@@ -1,7 +1,8 @@
 import Navbar from "../Components/Navbar.jsx";
 import axiosInstance from "../Common/axiosInstance.jsx";
 import {useEffect, useMemo, useState} from "react";
-import { Search, SlidersHorizontal, ChevronDown, Sparkles } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronDown, Sparkles, Plus, Minus, Save } from "lucide-react";
+import useAuthStore from "../store/authStore.js";
 import "../styles/collection.css";
 
 const rarityLabels = {
@@ -48,7 +49,12 @@ function isRarityMatch(cardRarity, selectedRarity) {
 }
 
 function Collection() {
+    const userId = useAuthStore((state) => state.userId);
     const [cards, setCards] = useState([]);
+    const [deckName, setDeckName] = useState("");
+    const [deckEntries, setDeckEntries] = useState({});
+    const [deckStatus, setDeckStatus] = useState({ type: "", message: "" });
+    const [isSavingDeck, setIsSavingDeck] = useState(false);
     const [filters, setFilters] = useState({
         search: "",
         rarity: "all",
@@ -131,9 +137,117 @@ function Collection() {
 
     const totalCards = cards.length;
     const visibleCards = filteredCards.length;
+    const deckCardCount = Object.values(deckEntries).reduce((sum, qty) => sum + Number(qty || 0), 0);
+
+    const cardsById = useMemo(() => {
+        const map = new Map();
+
+        cards.forEach((card) => {
+            const id = String(card.cardId ?? card.riftboundId ?? "");
+            if (id) {
+                map.set(id, card);
+            }
+        });
+
+        return map;
+    }, [cards]);
+
+    const selectedDeckCards = useMemo(() => {
+        return Object.entries(deckEntries)
+            .filter(([, quantity]) => quantity > 0)
+            .map(([cardId, quantity]) => {
+                const card = cardsById.get(cardId);
+                return {
+                    cardId,
+                    quantity,
+                    name: card?.name || "Unknown card",
+                    setLabel: card?.setLabel || card?.setId || "Unknown set",
+                };
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [cardsById, deckEntries]);
 
     function updateFilter(name, value) {
         setFilters((prev) => ({...prev, [name]: value}));
+    }
+
+    function addCardToDeck(card) {
+        const id = String(card.cardId ?? card.riftboundId ?? "");
+        if (!id) {
+            return;
+        }
+
+        setDeckStatus({ type: "", message: "" });
+        setDeckEntries((prev) => ({ ...prev, [id]: Number(prev[id] || 0) + 1 }));
+    }
+
+    function decreaseCardQuantity(cardId) {
+        setDeckEntries((prev) => {
+            const nextQuantity = Number(prev[cardId] || 0) - 1;
+            const next = { ...prev };
+
+            if (nextQuantity <= 0) {
+                delete next[cardId];
+            } else {
+                next[cardId] = nextQuantity;
+            }
+
+            return next;
+        });
+    }
+
+    function increaseCardQuantity(cardId) {
+        setDeckEntries((prev) => ({ ...prev, [cardId]: Number(prev[cardId] || 0) + 1 }));
+    }
+
+    function clearDeckBuilder() {
+        setDeckName("");
+        setDeckEntries({});
+        setDeckStatus({ type: "", message: "" });
+    }
+
+    async function saveDeck() {
+        const trimmedDeckName = deckName.trim();
+
+        if (!userId) {
+            setDeckStatus({ type: "error", message: "Missing user ID. Please log in again." });
+            return;
+        }
+
+        if (!trimmedDeckName) {
+            setDeckStatus({ type: "error", message: "Enter a deck name before saving." });
+            return;
+        }
+
+        if (selectedDeckCards.length === 0) {
+            setDeckStatus({ type: "error", message: "Add at least one card to the deck." });
+            return;
+        }
+
+        const deckList = selectedDeckCards.map((item) => `${item.cardId}:${item.quantity}`).join(";");
+
+        setDeckStatus({ type: "", message: "" });
+        setIsSavingDeck(true);
+
+        try {
+            await axiosInstance.post("/Deck/AddDeck", {
+                UserId: userId,
+                userId,
+                DeckName: trimmedDeckName,
+                deckName: trimmedDeckName,
+                DeckList: deckList,
+                deckList,
+            });
+
+            setDeckStatus({ type: "success", message: `Saved deck "${trimmedDeckName}".` });
+            setDeckEntries({});
+            setDeckName("");
+        } catch (error) {
+            const message = error?.response?.data?.message || "Failed to save deck.";
+            setDeckStatus({ type: "error", message });
+        } finally {
+            setIsSavingDeck(false);
+        }
     }
 
     function clearFilters() {
@@ -315,6 +429,80 @@ function Collection() {
                                     <Sparkles size={16} />
                                     Clear filters
                                 </button>
+
+                                <div className="deck-builder">
+                                    <div className="deck-builder-header">
+                                        <h3>Deck Builder</h3>
+                                        <span>{deckCardCount} cards</span>
+                                    </div>
+
+                                    <label className="filter-field">
+                                        <span className="filter-label">Deck name</span>
+                                        <div className="filter-input-wrap">
+                                            <input
+                                                type="text"
+                                                value={deckName}
+                                                onChange={(e) => setDeckName(e.target.value)}
+                                                placeholder="Enter deck name"
+                                            />
+                                        </div>
+                                    </label>
+
+                                    <div className="deck-list">
+                                        {selectedDeckCards.length === 0 && (
+                                            <p className="deck-empty">Add cards from the list to start building.</p>
+                                        )}
+
+                                        {selectedDeckCards.map((entry) => (
+                                            <div className="deck-item" key={entry.cardId}>
+                                                <div className="deck-item-info">
+                                                    <strong>{entry.name}</strong>
+                                                    <span>{entry.setLabel}</span>
+                                                </div>
+                                                <div className="deck-item-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="icon-button"
+                                                        onClick={() => decreaseCardQuantity(entry.cardId)}
+                                                        aria-label={`Decrease ${entry.name}`}
+                                                    >
+                                                        <Minus size={14} />
+                                                    </button>
+                                                    <span>{entry.quantity}</span>
+                                                    <button
+                                                        type="button"
+                                                        className="icon-button"
+                                                        onClick={() => increaseCardQuantity(entry.cardId)}
+                                                        aria-label={`Increase ${entry.name}`}
+                                                    >
+                                                        <Plus size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {deckStatus.message && (
+                                        <p className={`deck-status ${deckStatus.type === "error" ? "is-error" : "is-success"}`}>
+                                            {deckStatus.message}
+                                        </p>
+                                    )}
+
+                                    <div className="deck-actions">
+                                        <button type="button" className="secondary-button" onClick={clearDeckBuilder}>
+                                            Reset
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="save-deck-button"
+                                            onClick={saveDeck}
+                                            disabled={isSavingDeck}
+                                        >
+                                            <Save size={15} />
+                                            {isSavingDeck ? "Saving..." : "Save deck"}
+                                        </button>
+                                    </div>
+                                </div>
                             </aside>
                         </div>
 
@@ -377,6 +565,15 @@ function Collection() {
                                                         {card.overnumbered && <span>Overnumbered</span>}
                                                         {card.signature && <span>Signature</span>}
                                                     </div>
+
+                                                    <button
+                                                        type="button"
+                                                        className="add-to-deck-button"
+                                                        onClick={() => addCardToDeck(card)}
+                                                    >
+                                                        <Plus size={15} />
+                                                        Add to deck
+                                                    </button>
                                                 </div>
                                             </article>
                                         );

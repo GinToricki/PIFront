@@ -56,6 +56,7 @@ function Login() {
                     userId: payload.id ?? payload.userId ?? payload.user?.id ?? payload.user?.userId,
                     roles,
                     user: payload.user ?? null,
+                    funds: payload.funds ?? payload.balance ?? payload.wallet ?? payload.walletBalance,
                 });
 
                 const roleMessage = isAdmin ? "Admin" : isMember ? "Member" : "User";

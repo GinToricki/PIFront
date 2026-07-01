@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, LayoutDashboard, Store, Trash2, Trophy } from "lucide-react";
+import { CalendarClock, LayoutDashboard, Pencil, Save, Store, Trash2, Trophy, X } from "lucide-react";
 import useTournamentStore from "../store/tournamentStore.js";
 import axiosInstance from "../Common/axiosInstance.jsx";
 
@@ -92,13 +92,66 @@ function normalizeListingPayload(payload) {
     return [];
 }
 
+function toDateTimeLocalInput(value) {
+    if (!value) {
+        return "";
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return "";
+    }
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    const hours = String(parsed.getHours()).padStart(2, "0");
+    const minutes = String(parsed.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toTimeInput(value) {
+    if (!value) {
+        return "";
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return "";
+    }
+
+    const hours = String(parsed.getHours()).padStart(2, "0");
+    const minutes = String(parsed.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+}
+
+function toTournamentFormValues(tournament) {
+    return {
+        game: tournament?.game || "Riftbound",
+        format: tournament?.format || "Standard",
+        startDate: toDateTimeLocalInput(tournament?.startDate),
+        checkInTime: toTimeInput(tournament?.checkInTime),
+        location: tournament?.location || "",
+        maxPlayers: String(tournament?.maxPlayers ?? 32),
+        entryFee: String(tournament?.entryFee ?? 15),
+        prizePool: String(tournament?.prizePool ?? 500),
+        notes: tournament?.notes || "",
+    };
+}
+
 function AdminDashboard({ userId }) {
     const tournaments = useTournamentStore((state) => state.tournaments);
     const addTournament = useTournamentStore((state) => state.addTournament);
+    const updateTournament = useTournamentStore((state) => state.updateTournament);
+    const deleteTournamentFromStore = useTournamentStore((state) => state.deleteTournament);
     const fetchTournaments = useTournamentStore((state) => state.fetchTournaments);
     const loading = useTournamentStore((state) => state.loading);
     const error = useTournamentStore((state) => state.error);
-    const [createSuccess, setCreateSuccess] = useState("");
+    const [tournamentActionMessage, setTournamentActionMessage] = useState("");
+    const [tournamentActionError, setTournamentActionError] = useState("");
+    const [editingTournamentId, setEditingTournamentId] = useState("");
+    const [savingTournamentId, setSavingTournamentId] = useState("");
+    const [deletingTournamentId, setDeletingTournamentId] = useState("");
     const [activeTab, setActiveTab] = useState("tournaments");
     const [listings, setListings] = useState([]);
     const [isLoadingListings, setIsLoadingListings] = useState(false);
@@ -116,6 +169,7 @@ function AdminDashboard({ userId }) {
         prizePool: "500",
         notes: "",
     });
+    const [editForm, setEditForm] = useState(toTournamentFormValues(null));
 
     useEffect(() => {
         fetchTournaments();
@@ -180,13 +234,13 @@ function AdminDashboard({ userId }) {
             ...prev,
             [name]: value,
         }));
-        if (createSuccess) {
-            setCreateSuccess("");
-        }
+        setTournamentActionMessage("");
+        setTournamentActionError("");
     }
 
     async function createTournament(event) {
         event.preventDefault();
+        setTournamentActionError("");
 
         try {
             await addTournament({
@@ -208,9 +262,77 @@ function AdminDashboard({ userId }) {
                 prizePool: form.prizePool,
                 notes: "",
             });
-            setCreateSuccess("Tournament created. It is now live on the Tournaments page.");
-        } catch {
-            setCreateSuccess("");
+            setTournamentActionMessage("Tournament created. It is now live on the Tournaments page.");
+        } catch (requestError) {
+            setTournamentActionMessage("");
+            setTournamentActionError(requestError?.response?.data?.message || "Could not create tournament.");
+        }
+    }
+
+    function startEditingTournament(tournament) {
+        setEditingTournamentId(String(tournament?.id ?? ""));
+        setEditForm(toTournamentFormValues(tournament));
+        setTournamentActionMessage("");
+        setTournamentActionError("");
+    }
+
+    function cancelEditingTournament() {
+        setEditingTournamentId("");
+        setSavingTournamentId("");
+        setEditForm(toTournamentFormValues(null));
+    }
+
+    function updateEditField(name, value) {
+        setEditForm((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+        setTournamentActionMessage("");
+        setTournamentActionError("");
+    }
+
+    async function saveTournamentEdits(event, tournamentId) {
+        event.preventDefault();
+        setSavingTournamentId(String(tournamentId));
+        setTournamentActionError("");
+
+        try {
+            await updateTournament({
+                id: tournamentId,
+                ...editForm,
+                maxPlayers: Number(editForm.maxPlayers || 0),
+                entryFee: Number(editForm.entryFee || 0),
+                prizePool: Number(editForm.prizePool || 0),
+            });
+            setEditingTournamentId("");
+            setTournamentActionMessage(`Tournament #${tournamentId} updated.`);
+        } catch (requestError) {
+            setTournamentActionMessage("");
+            setTournamentActionError(requestError?.response?.data?.message || "Could not update tournament.");
+        } finally {
+            setSavingTournamentId("");
+        }
+    }
+
+    async function deleteTournament(tournamentId) {
+        if (!tournamentId) {
+            return;
+        }
+
+        setDeletingTournamentId(String(tournamentId));
+        setTournamentActionError("");
+        setTournamentActionMessage("");
+
+        try {
+            await deleteTournamentFromStore(tournamentId);
+            if (editingTournamentId === String(tournamentId)) {
+                cancelEditingTournament();
+            }
+            setTournamentActionMessage(`Tournament #${tournamentId} deleted.`);
+        } catch (requestError) {
+            setTournamentActionError(requestError?.response?.data?.message || "Could not delete tournament.");
+        } finally {
+            setDeletingTournamentId("");
         }
     }
 
@@ -409,7 +531,173 @@ function AdminDashboard({ userId }) {
                             </form>
                             {loading && <p className="admin-form-success">Syncing tournaments...</p>}
                             {error && <p className="admin-form-error">{error}</p>}
-                            {createSuccess && <p className="admin-form-success">{createSuccess}</p>}
+                            {tournamentActionMessage && <p className="admin-form-success">{tournamentActionMessage}</p>}
+                            {tournamentActionError && <p className="admin-form-error">{tournamentActionError}</p>}
+                        </div>
+
+                        <div className="admin-create-wrap">
+                            <h2>Manage tournaments</h2>
+                            <p>Update or remove current tournaments.</p>
+
+                            {tournaments.length === 0 && <p>No tournaments found.</p>}
+
+                            {tournaments.length > 0 && (
+                                <div className="dashboard-listings-grid">
+                                    {tournaments.map((tournament) => (
+                                        <article key={tournament.id} className="dashboard-listing-item">
+                                            <div>
+                                                <div className="dashboard-listing-topline">
+                                                    <span className="dashboard-rarity-pill">{tournament.status}</span>
+                                                    <span>{tournament.format}</span>
+                                                </div>
+                                                <strong>{tournament.name}</strong>
+                                                <p>{tournament.location || "TBD"}</p>
+                                                <p>Players: {tournament.maxPlayers}</p>
+                                                <p>Entry: ${Number(tournament.entryFee || 0).toFixed(2)}</p>
+                                                <p>Prize: ${Number(tournament.prizePool || 0).toFixed(2)}</p>
+                                            </div>
+
+                                            {editingTournamentId === String(tournament.id) && (
+                                                <form
+                                                    className="admin-tournament-form"
+                                                    onSubmit={(event) => saveTournamentEdits(event, tournament.id)}
+                                                >
+                                                    <label>
+                                                        Game
+                                                        <input
+                                                            type="text"
+                                                            value={editForm.game}
+                                                            onChange={(event) => updateEditField("game", event.target.value)}
+                                                            required
+                                                        />
+                                                    </label>
+                                                    <label>
+                                                        Format
+                                                        <select
+                                                            value={editForm.format}
+                                                            onChange={(event) => updateEditField("format", event.target.value)}
+                                                        >
+                                                            <option value="Standard">Standard</option>
+                                                            <option value="Draft">Draft</option>
+                                                            <option value="Sealed">Sealed</option>
+                                                            <option value="Commander">Commander</option>
+                                                        </select>
+                                                    </label>
+                                                    <label>
+                                                        Start date and time
+                                                        <input
+                                                            type="datetime-local"
+                                                            value={editForm.startDate}
+                                                            onChange={(event) => updateEditField("startDate", event.target.value)}
+                                                            required
+                                                        />
+                                                    </label>
+                                                    <label>
+                                                        Check-in time
+                                                        <input
+                                                            type="time"
+                                                            value={editForm.checkInTime}
+                                                            onChange={(event) => updateEditField("checkInTime", event.target.value)}
+                                                        />
+                                                    </label>
+                                                    <label>
+                                                        Location
+                                                        <input
+                                                            type="text"
+                                                            value={editForm.location}
+                                                            onChange={(event) => updateEditField("location", event.target.value)}
+                                                            required
+                                                        />
+                                                    </label>
+                                                    <label>
+                                                        Max players
+                                                        <input
+                                                            type="number"
+                                                            min="2"
+                                                            value={editForm.maxPlayers}
+                                                            onChange={(event) => updateEditField("maxPlayers", event.target.value)}
+                                                            required
+                                                        />
+                                                    </label>
+                                                    <label>
+                                                        Entry fee (USD)
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={editForm.entryFee}
+                                                            onChange={(event) => updateEditField("entryFee", event.target.value)}
+                                                            required
+                                                        />
+                                                    </label>
+                                                    <label>
+                                                        Prize pool (USD)
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={editForm.prizePool}
+                                                            onChange={(event) => updateEditField("prizePool", event.target.value)}
+                                                            required
+                                                        />
+                                                    </label>
+                                                    <label className="admin-form-span">
+                                                        Notes
+                                                        <textarea
+                                                            value={editForm.notes}
+                                                            onChange={(event) => updateEditField("notes", event.target.value)}
+                                                            rows={3}
+                                                        />
+                                                    </label>
+
+                                                    <div className="admin-form-span dashboard-listing-actions">
+                                                        <button
+                                                            type="submit"
+                                                            className="dashboard-secondary-button"
+                                                            disabled={savingTournamentId === String(tournament.id)}
+                                                        >
+                                                            <Save size={15} />
+                                                            {savingTournamentId === String(tournament.id) ? "Saving..." : "Save"}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="dashboard-secondary-button"
+                                                            onClick={cancelEditingTournament}
+                                                            disabled={savingTournamentId === String(tournament.id)}
+                                                        >
+                                                            <X size={15} />
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            )}
+
+                                            {editingTournamentId !== String(tournament.id) && (
+                                                <div className="dashboard-listing-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="dashboard-secondary-button"
+                                                        onClick={() => startEditingTournament(tournament)}
+                                                        disabled={deletingTournamentId === String(tournament.id)}
+                                                    >
+                                                        <Pencil size={15} />
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="dashboard-danger-button"
+                                                        onClick={() => deleteTournament(tournament.id)}
+                                                        disabled={deletingTournamentId === String(tournament.id)}
+                                                    >
+                                                        <Trash2 size={15} />
+                                                        {deletingTournamentId === String(tournament.id) ? "Deleting..." : "Delete"}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </article>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </>
                 )}

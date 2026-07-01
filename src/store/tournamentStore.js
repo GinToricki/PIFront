@@ -70,6 +70,21 @@ function buildCheckInDateTime(startDate, checkInTime) {
     return checkIn.toISOString();
 }
 
+function buildTournamentRequest(rawTournament, fallbackId = 0) {
+    return {
+        tournamentId: toNumber(rawTournament.id ?? rawTournament.tournamentId, fallbackId),
+        game: String(rawTournament.game || "").trim(),
+        format: String(rawTournament.format || "").trim(),
+        startDateTime: toIsoString(rawTournament.startDate),
+        checkInTime: buildCheckInDateTime(rawTournament.startDate, rawTournament.checkInTime),
+        location: String(rawTournament.location || "").trim(),
+        maxPlayers: Math.max(2, toNumber(rawTournament.maxPlayers, 2)),
+        entryFee: Math.max(0, toNumber(rawTournament.entryFee, 0)),
+        prizePool: Math.max(0, toNumber(rawTournament.prizePool, 0)),
+        notes: String(rawTournament.notes || "").trim() || null,
+    };
+}
+
 const useTournamentStore = create(
     (set, get) => ({
         tournaments: [],
@@ -94,20 +109,32 @@ const useTournamentStore = create(
         addTournament: async (rawTournament) => {
             set({ error: "" });
 
-            const requestBody = {
-                tournamentId: 0,
-                game: String(rawTournament.game || "").trim(),
-                format: String(rawTournament.format || "").trim(),
-                startDateTime: toIsoString(rawTournament.startDate),
-                checkInTime: buildCheckInDateTime(rawTournament.startDate, rawTournament.checkInTime),
-                location: String(rawTournament.location || "").trim(),
-                maxPlayers: Math.max(2, toNumber(rawTournament.maxPlayers, 2)),
-                entryFee: Math.max(0, toNumber(rawTournament.entryFee, 0)),
-                prizePool: Math.max(0, toNumber(rawTournament.prizePool, 0)),
-                notes: String(rawTournament.notes || "").trim() || null,
-            };
+            const requestBody = buildTournamentRequest(rawTournament, 0);
 
             await axiosInstance.post("/Tournament/AddTournament", requestBody);
+            await get().fetchTournaments();
+        },
+        updateTournament: async (rawTournament) => {
+            set({ error: "" });
+
+            const tournamentId = toNumber(rawTournament.id ?? rawTournament.tournamentId, 0);
+            if (!Number.isInteger(tournamentId) || tournamentId <= 0) {
+                throw new Error("Invalid tournament ID.");
+            }
+
+            const requestBody = buildTournamentRequest(rawTournament, tournamentId);
+            await axiosInstance.post("/Tournament/UpdateTournament", requestBody);
+            await get().fetchTournaments();
+        },
+        deleteTournament: async (tournamentIdRaw) => {
+            set({ error: "" });
+
+            const tournamentId = toNumber(tournamentIdRaw, 0);
+            if (!Number.isInteger(tournamentId) || tournamentId <= 0) {
+                throw new Error("Invalid tournament ID.");
+            }
+
+            await axiosInstance.post(`/Tournament/DeleteTournament/${tournamentId}`);
             await get().fetchTournaments();
         },
     })

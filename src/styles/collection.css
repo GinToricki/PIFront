@@ -185,6 +185,146 @@
     filter: brightness(1.02);
 }
 
+.deck-builder {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.deck-builder-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.deck-builder-header h3 {
+    margin: 0;
+    font-size: 0.98rem;
+    color: #111827;
+}
+
+.deck-builder-header span {
+    font-size: 0.82rem;
+    color: #6b7280;
+}
+
+.deck-list {
+    display: grid;
+    gap: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 12px;
+}
+
+.deck-empty {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #6b7280;
+}
+
+.deck-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.deck-item-info {
+    min-width: 0;
+}
+
+.deck-item-info strong,
+.deck-item-info span {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.deck-item-info strong {
+    font-size: 0.84rem;
+    color: #111827;
+}
+
+.deck-item-info span {
+    font-size: 0.76rem;
+    color: #6b7280;
+}
+
+.deck-item-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.icon-button {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: #374151;
+    padding: 0;
+}
+
+.icon-button:hover {
+    border-color: #9ca3af;
+}
+
+.deck-status {
+    margin: 0 0 12px;
+    font-size: 0.84rem;
+}
+
+.deck-status.is-error {
+    color: #b91c1c;
+}
+
+.deck-status.is-success {
+    color: #166534;
+}
+
+.deck-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.secondary-button,
+.save-deck-button {
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #fff;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.save-deck-button {
+    border: 0;
+    background: linear-gradient(135deg, #2563eb, #5b5ce2);
+    color: #fff;
+}
+
+.save-deck-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .collection-results {
     padding: 18px;
 }
@@ -346,6 +486,25 @@
 .card-flags span {
     background: #f3f4f6;
     color: #374151;
+}
+
+.add-to-deck-button {
+    margin-top: 12px;
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    background: #eef2ff;
+    color: #3730a3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.add-to-deck-button:hover {
+    background: #e0e7ff;
 }
 
 .empty-state {

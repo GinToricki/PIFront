@@ -3,6 +3,7 @@ import { CalendarDays, MapPin, Trophy, Users } from "lucide-react";
 import { useNavigate } from "react-router";
 import Calendar from "react-calendar";
 import Navbar from "../Components/Navbar.jsx";
+import useAuthStore from "../store/authStore.js";
 import useTournamentStore from "../store/tournamentStore.js";
 import "react-calendar/dist/Calendar.css";
 import "../styles/tournaments.css";
@@ -70,11 +71,20 @@ function formatDateLabel(value) {
 
 function TournamentPage() {
     const navigate = useNavigate();
+    const storedRole = useAuthStore((state) => state.role);
+    const storedRoles = useAuthStore((state) => state.roles);
     const tournaments = useTournamentStore((state) => state.tournaments);
     const fetchTournaments = useTournamentStore((state) => state.fetchTournaments);
     const loading = useTournamentStore((state) => state.loading);
     const error = useTournamentStore((state) => state.error);
     const [selectedDate, setSelectedDate] = useState(null);
+
+    const roles = Array.isArray(storedRoles) && storedRoles.length > 0
+        ? storedRoles
+        : storedRole
+            ? [storedRole]
+            : [];
+    const isAdmin = roles.some((roleValue) => String(roleValue).toLowerCase() === "admin");
 
     useEffect(() => {
         fetchTournaments();
@@ -155,13 +165,15 @@ function TournamentPage() {
                             <aside className="tournament-calendar-panel">
                                 <div className="tournament-panel-head">
                                     <h2>Calendar</h2>
-                                    <button
-                                        type="button"
-                                        className="tournament-admin-link"
-                                        onClick={() => navigate("/Dashboard")}
-                                    >
-                                        Create From Admin Dashboard
-                                    </button>
+                                    {isAdmin && (
+                                        <button
+                                            type="button"
+                                            className="tournament-admin-link"
+                                            onClick={() => navigate("/Dashboard")}
+                                        >
+                                            Create From Admin Dashboard
+                                        </button>
+                                    )}
                                 </div>
 
                                 <Calendar

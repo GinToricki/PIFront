@@ -58,6 +58,8 @@ function ShoppingCart() {
     const updateQuantity = useCartStore((state) => state.updateQuantity);
     const authToken = useAuthStore((state) => state.token);
     const authUser = useAuthStore((state) => state.user);
+    const funds = useAuthStore((state) => state.funds);
+    const deductFunds = useAuthStore((state) => state.deductFunds);
     const [isPurchasing, setIsPurchasing] = useState(false);
     const [snackbar, setSnackbar] = useState({
         open: false,
@@ -84,12 +86,18 @@ function ShoppingCart() {
     );
     const rawToken = typeof authToken === "string" ? authToken : authToken?.token;
     const userId = useMemo(() => resolveUserId(authUser, rawToken), [authUser, rawToken]);
-    const canPurchase = items.length > 0 && !!userId && !isPurchasing;
+    const hasEnoughFunds = Number(funds || 0) >= subtotal;
+    const canPurchase = items.length > 0 && !!userId && hasEnoughFunds && !isPurchasing;
 
     async function purchaseItems() {
         if (!canPurchase) {
             if (!userId) {
                 openSnackbar("warning", "You must be logged in before purchasing.");
+                return;
+            }
+
+            if (!hasEnoughFunds) {
+                openSnackbar("warning", "Not enough funds. Please add more funds.");
             }
             return;
         }
@@ -108,6 +116,7 @@ function ShoppingCart() {
             );
 
             clearCart();
+            deductFunds(subtotal);
             openSnackbar("success", "Purchase completed successfully.");
         } catch (error) {
             console.error(error);
@@ -204,6 +213,14 @@ function ShoppingCart() {
                                 ))}
                             </div>
                             <div className="shopping-cart-checkout">
+                                <div className="shopping-cart-funds">
+                                    <p>Available funds: ${Number(funds || 0).toFixed(2)}</p>
+                                    {!hasEnoughFunds && (
+                                        <p className="purchase-error">
+                                            Not enough funds. Please add more funds.
+                                        </p>
+                                    )}
+                                </div>
                                 <button
                                     type="button"
                                     className="purchase-button"
