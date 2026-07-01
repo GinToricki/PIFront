@@ -27,6 +27,9 @@ function Navbar(props) {
                         <li className="nav-item">
                             <a className={`nav-link  ${props.active === "cart" ? "active ac " : ""} `} href="/ShoppingCart">Shopping Cart</a>
                         </li>
+                        <li className="nav-item">
+                            <a className={`nav-link  ${props.active === "tournaments" ? "active ac " : ""} `} href="/Tournaments">Tournaments</a>
+                        </li>
 
                     </ul>
                     <div className="navbar-actions">
