@@ -4,6 +4,7 @@ import Navbar from "../Components/Navbar.jsx";
 import "../styles/marketplace.css";
 import axiosInstance from "../Common/axiosInstance.jsx";
 import useCartStore from "../store/cartStore.js";
+import useAuthStore from "../store/authStore.js";
 
 const rarityLabels = {
     1: "Common",
@@ -29,6 +30,7 @@ function getRarityLabel(value) {
 
 function Marketplace() {
     const addToCart = useCartStore((state) => state.addItem);
+    const userId = useAuthStore((state) => state.userId);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCardId, setSelectedCardId] = useState("");
@@ -222,6 +224,8 @@ function Marketplace() {
                 quantity: newListing.quantity,
                 condition: newListing.condition,
                 notes: newListing.notes,
+                userId,
+                UserId: userId,
             });
 
             loadListings();

@@ -327,6 +327,141 @@
     font-weight: 600;
 }
 
+.dashboard-listings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.dashboard-listing-item {
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dashboard-listing-item p {
+    margin: 4px 0 0;
+    color: #4a5568;
+}
+
+.dashboard-listing-card-head {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.dashboard-listing-media {
+    width: 64px;
+    height: 88px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #d7deea;
+    background: #f8fafc;
+}
+
+.dashboard-listing-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.dashboard-listing-main strong {
+    display: block;
+    font-size: 16px;
+    margin-top: 2px;
+}
+
+.dashboard-listing-topline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #4a5568;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dashboard-rarity-pill {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #d1d9e6;
+    border-radius: 999px;
+    padding: 2px 8px;
+    background: #f8fafc;
+    color: #1f2937;
+}
+
+.dashboard-listing-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dashboard-danger-button,
+.dashboard-secondary-button {
+    border: 1px solid #d1d9e6;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+}
+
+.dashboard-danger-button {
+    border-color: #ef4444;
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.dashboard-danger-button:disabled {
+    opacity: 0.7;
+}
+
+.dashboard-listing-edit-form {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.dashboard-listing-edit-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.dashboard-listing-edit-form input,
+.dashboard-listing-edit-form select,
+.dashboard-listing-edit-form textarea {
+    border: 1px solid #cdd6e3;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+}
+
+.dashboard-listing-edit-notes {
+    grid-column: 1 / -1;
+}
+
+.dashboard-listing-edit-actions {
+    display: flex;
+    gap: 8px;
+    grid-column: 1 / -1;
+}
+
 @media (max-width: 860px) {
     .member-dashboard {
         grid-template-columns: 1fr;
@@ -364,6 +499,10 @@
     }
 
     .admin-dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-listing-edit-form {
         grid-template-columns: 1fr;
     }
 }
