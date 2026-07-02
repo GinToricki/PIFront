@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: ../../RiderProjects/PIBackend
+      dockerfile: Dockerfile
+    container_name: untitled-backend
+    ports:
+      - "5006:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: untitled-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
